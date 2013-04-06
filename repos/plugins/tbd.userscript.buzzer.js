@@ -4,7 +4,8 @@ TBDPluginBuzzer = new function() {
 	this.regex = '^(buzz)$';
 	var b = document.getElementById('GM_TBD_tmp'),
 	s = document.createElement('audio');
-	s.src = 'http://www.soundjay.com/button/beep-1.wav';
+//	s.src = 'http://www.soundjay.com/button/beep-1.wav';
+	s.src = 'http://images.wikia.com/monchbox/images/0/01/Beep-sound.ogg';
 	s.preload = 'auto';
 	b.appendChild(s);
 

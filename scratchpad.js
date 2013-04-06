@@ -13,7 +13,7 @@
 // @require     http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @require			http://chat.tbd.my/tbd/jquery.base64.min.js
 // @require     http://chat.tbd.my/tbd/pushstream.js
-// @version     1.0.44
+// @version     1.0.77
 // @grant GM_getValue
 // @grant GM_setValue
 // @grant GM_log
@@ -44,11 +44,20 @@ if (typeof GM_xmlhttprequest === 'undefined'){
 	};
 }
 
-
-
+//Create temporary directory
+var TBDElement = new function(){
+	this.body = document.getElementsByTagName('body')[0];
+	var tmp = document.createElement('div');
+	tmp.style.display='none';
+	tmp.id = 'GM_TBD_tmp';
+	this.tmp = tmp;
+	this.body.appendChild(tmp);
+},
 //Initialize of the bot
-var GM_TBD_init = function(){
+GM_TBD_init = function(){
 	GM_log('Initialized');
+
+
 	//TBDRequest Represents what is displayed at chatbox.
 	var TBDRequest = new function (){
 		this.url='chat.tbd.my';
@@ -73,24 +82,68 @@ var GM_TBD_init = function(){
 				}
 			});
 		};
-	};
+	},
 
 	//TBDSession The users identity to post or get anything
-	var TBDSession = new function(){
+	TBDSession = new function(){
 		this.username = unsafeWindow.tbd_uname;
 		this.userid = unsafeWindow.tbd_uid;
 		this.shout_key = jquery('#shout_key').attr('value');
 		this.post_key = 	unsafeWindow.my_post_key;
-	}
+	},
+	//TBDPlugins Load or call the plugins action
+	TBDPlugins = new function(){
+			this.actions = {};
+			this.repo = {};
+			//Create and load plugin script
+			var _list = 'list.js',
+			_url_prefix = 'https://raw.github.com/jejakapemalu/TBDUserScript/devel/repos/',
+			r = document.createElement('script');
+      r.type = 'text/javascript';
+      r.src = _url_prefix + _list;
+      TBDElement.body.appendChild(r);
+      
+      //Load Repolists	
+			var _get_repo_list = function(){
+				if (typeof unsafeWindow.TBDRepositories === 'undefined' ){
+					window.setTimeout(_get_repo_list, 100);				
+				}else{
+					this.repo = unsafeWindow.TBDRepositories;
+				}
+    	};
+  
+    	//Execute each repo's loaded actions
+    	
+	  	_get_repo_list();
+    	//Enabled plugins lists
+			this.enabled = GM_getValue('plugins',['Buzzer']);
+			
+			for (var i=0; i<this.enabled.length; i++) {
+				var s = document.createElement('script');
+      	s.type = 'text/javascript';
+      	s.src = _url_prefix +'plugins/tbd.userscript.'+this.enabled[i].toLowerCase()+'.js';
+      	TBDElement.body.appendChild(s);
+			}
+	},
 
 	//TBDResponse what the output of the bot be like
-	var TBDResponse = new function(){
-		this.beforeFilter= function(){
-			GM_log('BeforeFilter :'+TBDRequest.message);
-		};
-	}
+	TBDResponse =  function(){
+			GM_log('Filter :'+TBDRequest.message);
+			for (var i=0; i<TBDPlugins.enabled.length; i++) {
+				var fn = 'TBDPlugin'+TBDPlugins.enabled[i];
+				fn = unsafeWindow[fn];
+				if (typeof fn !== 'undefined'){
+					var re = new RegExp(fn.regex);
+					if (re.test(String(TBDRequest.message))){
+						GM_log('Executing action for '+TBDPlugins.enabled[i]);
+						fn.action();
+					}
+				}
+			}
+	},
+
 	//HTTP get chat contents
-	var http_get_chat = function(){
+	http_get_chat = function(){
 		TBDRequest.GET(TBDRequest.shout_url,function(doc) {
 						var d = doc.documentElement.innerHTML.split("<br>");
 						d = d[0].split("member.php?action=profile&amp;uid=");
@@ -104,7 +157,7 @@ var GM_TBD_init = function(){
 						TBDRequest.message = d[1];
 
 				if (TBDRequest.lastid < b ){
-					TBDResponse.beforeFilter();
+					TBDResponse();
 					TBDRequest.lastid = b;
 				}
 			});
@@ -128,7 +181,7 @@ var GM_TBD_init = function(){
 					TBDRequest.message = d.shout_msg;
 					TBDRequest.username = jquery(d.uname).html();
 					TBDRequest.userid = d.uid;
-					TBDResponse.beforeFilter();
+					TBDResponse();
 				}
 				TBDRequest.lastid = b;
 		  };		
