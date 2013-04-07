@@ -1,15 +1,13 @@
+//Sample of plugin without output and
 TBDPluginBuzzer = new function() {
-	this.session = true;
-	this.response = true;
 	this.regex = '^(buzz)$';
-	var b = document.getElementById('GM_TBD_tmp'),
-	s = document.createElement('audio');
+	this.regexFlag = 'i';
+	//var b = document.getElementById('GM_TBD_tmp'),
+	var s = document.createElement('audio');
 //	s.src = 'http://www.soundjay.com/button/beep-1.wav';
 	s.src = 'http://images.wikia.com/monchbox/images/0/01/Beep-sound.ogg';
 	s.preload = 'auto';
-	b.appendChild(s);
-
-	var	$ = window.jQuery = window.jQuery.noConflict(true);
+//	b.appendChild(s);
 	this.action = function(){
 		s.load();
 		if (typeof s.play === 'undefined'){
@@ -17,6 +15,7 @@ TBDPluginBuzzer = new function() {
 		}else{
 			s.play();
 		}
+		return false;
 	}
 		
 };
