@@ -12,43 +12,53 @@
 // @include     https://w3.tbd.my/*
 // @exclude	http*://w3.tbd.my/xmlhttp.php*
 // @exclude	http*://w3.tbd.my/ch.php
-// @require     http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
-// @require	http://chat.tbd.my/tbd/jquery.base64.min.js
 // @require     http://chat.tbd.my/tbd/pushstream.js
-// @version     2.0.85
-// @grant GM_getValue
-// @grant GM_setValue
-// @grant GM_log
-// @grant GM_xmlhttprequest
-// @grant GM_addStyle
+// @version     2.0.90
 // ==/UserScript==
 //
 
+var isUndefined = function (obj){
+	return ((typeof obj === "undefined")===true);
+}
+//Rewrite function if not exists
+if ( isUndefined(unsafeWindow) ) {
+    var unsafeWindow    = ( function () {
+        var dummyElem   = document.createElement('p');
+        dummyElem.setAttribute ('onclick', 'return window;');
+        return dummyElem.onclick ();
+    } ) ();
+}
 if (typeof GM_log === 'undefined'){
 	var GM_log = function(msg){
 		console.log(msg);
 	}
 }
 
-if (typeof GM_xmlhttprequest === 'undefined'){
-	var GM_xmlhttprequest = function (params) {
-   	    var req = new XMLHttpRequest();
-       	req.open(params.method, params.url,true);
-   	    for (var header in params.headers) {
-   		   req.setRequestHeader(header, params.headers[header]);
-		}
-		req.onreadystatechange = function () {
-			if (req.readyState == 4 && req.status == 200) {
-				params.onload(req);
+if (isUndefined(GM_xmlhttprequest)){
+	if ( isUndefined(GM_xmlhttpRequest)){
+		var GM_xmlhttprequest = function (params) {
+ 	    var req = new XMLHttpRequest();
+   		req.open(params.method, params.url,true);
+			req.onreadystatechange = function () {
+				if (req.readyState == 4 && req.status == 200) {
+					params.onload(req);
+				}
+			};
+			if (params.method === 'POST'){
+			  for (var header in params.headers) {
+   			   req.setRequestHeader(header, params.headers[header]);
+				}
+			  req.send(params.data);
+			}else{
+			  req.send();
 			}
 		};
-		if (params.method === 'POST'){
-		  req.send(params.data);
-		}else{
-		  req.send();
-		}
-	};
+	}else{
+		var GM_xmlhttprequest = GM_xmlhttpRequest;
+	}
 }
+//End of defined functions
+
 //Create temporary directory
 var TBDElement = new function(){
 	this.body = document.getElementsByTagName('body')[0];
@@ -57,7 +67,8 @@ var TBDElement = new function(){
 	tmp.id = 'GM_TBD_tmp';
 	this.tmp = tmp;
 	this.body.appendChild(tmp);
-},
+},//EOF TBDElement
+
 //Initialize of the bot
 GM_TBD_init = function(){
 	GM_log('Initialized');
@@ -78,20 +89,13 @@ GM_TBD_init = function(){
 			    
 				method: "GET",
 				url: url,
-				headers: {
-			  	"Content-Type": "application/x-www-form-urlencoded"
-			  	},
 				onload: function(r) {
-//					var dt = document.implementation.createDocumentType("html", "-//W3C//DTD HTML 4.01 Transitional//EN", "http://www.w3.org/TR/html4/loose.dtd"),
-//					d = document.implementation.createDocument('', '', dt), html = d.createElement('html');
-//					html.innerHTML = r.responseText;
-//					d.appendChild(html);
 					TBDResponse.message = r.responseText;
 					fn(r.responseText);
 				}
 			});
 		}
-	},
+	},//EOF TBDRequest
 
 	//TBDSession The users identity to post or get anything
 	TBDSession = {
@@ -99,7 +103,7 @@ GM_TBD_init = function(){
 		userid : unsafeWindow.tbd_uid,
 		shout_key : jquery('#shout_key').attr('value'),
 		post_key : 	unsafeWindow.my_post_key
-	},
+	},//EOF TBDSession
 	//TBDPlugins Load or call the plugins action
 	TBDPlugins = new function(){
 			this.actions = {};
@@ -114,7 +118,7 @@ GM_TBD_init = function(){
       
       //Load Repolists	
 			var _get_repo_list = function(){
-				if (typeof unsafeWindow.TBDRepositories === 'undefined' ){
+				if ( isUndefined(unsafeWindow.TBDRepositories)){
 					window.setTimeout(_get_repo_list, 100);				
 				}else{
 					this.repo = unsafeWindow.TBDRepositories;
@@ -130,7 +134,7 @@ GM_TBD_init = function(){
       	s.src = _url_prefix +'plugins/tbd.userscript.'+this.enabled[i].toLowerCase()+'.js';
       	TBDElement.body.appendChild(s);
 			}
-	},
+	},//EOF TBDPlugins
 
 	//TBDResponse what the output of the bot be like
 	TBDResponse =  function(){
@@ -160,7 +164,7 @@ GM_TBD_init = function(){
 									fn.callback(output);
 								}else{
 									var callback = window[fn.callback];
-									if (typeof callback !== 'undefined'){
+									if (!isUndefined(callback)){
 										cb(output);
 									}else{
 										http_post_chat(output);
@@ -170,7 +174,7 @@ GM_TBD_init = function(){
 					}
 				}
 			}
-	},
+	},//EOF TBDResponse
 	//post function for chat
 	http_post_chat = function(msg){
 		GM_xmlhttpRequest({
@@ -184,7 +188,7 @@ GM_TBD_init = function(){
 					GM_log(responseDetails);
     		}
 		});
-	},
+	},//EOF http_post_chat
 
 	//HTTP get chat contents
 	http_get_chat = function(){
@@ -205,7 +209,8 @@ GM_TBD_init = function(){
 				}
 					TBDRequest.lastid = b;
 			});
-	};
+	};//EOF http_get_chat
+	
 	if (("WebSocket" in window)===true){    //Yes Got websocket
 		GM_log('Using socket');
 
@@ -236,9 +241,9 @@ GM_TBD_init = function(){
 		GM_log('No socket');
 		setInterval (function(){http_get_chat()},2000)
 	}
-},
+},//EOF GM_TBD_init
 GM_start = function () {
-	if (typeof unsafeWindow.jQuery === 'undefined') {
+	if (	isUndefined(unsafeWindow.jQuery)) {
 		window.setTimeout(GM_start, 100);
 	} else {
 		jquery = unsafeWindow.jQuery = unsafeWindow.jQuery.noConflict(true);
@@ -246,5 +251,5 @@ GM_start = function () {
 			GM_TBD_init();
 		});
 	}
-};
+};//EOF GM_start
 GM_start();

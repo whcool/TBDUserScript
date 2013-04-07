@@ -6,7 +6,7 @@ var TBDPluginSalam = new function() {
 	this.action = function(){
 		var output = 'وَعَلَيْكُمْ السَّلاَمُ وَرَحْمَةُ اللهِ وَبَرَكَاتُهُ ';
 		if (typeof this.request.username !== 'undefined'){
-			output+= this.request.username;
+			output+= '[b]'+this.request.username+'[/b]';
 		}
 		return output;
 	}
