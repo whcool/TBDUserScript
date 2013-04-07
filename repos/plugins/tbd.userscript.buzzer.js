@@ -1,5 +1,5 @@
 //Sample of plugin without output and
-TBDPluginBuzzer = new function() {
+var TBDPluginBuzzer = new function() {
 	this.regex = '^(buzz)$';
 	this.regexFlag = 'i';
 	//var b = document.getElementById('GM_TBD_tmp'),

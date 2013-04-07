@@ -1,4 +1,4 @@
-TBDPluginSalam = new function() {
+var TBDPluginSalam = new function() {
 	this.request = true;
 	this.regex = '^(assalamualiakum|salam|assalamualaikumsalam wbt|assalam)$';
 	this.regexFlag = "i";
