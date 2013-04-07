@@ -98,7 +98,7 @@ GM_TBD_init = function(){
 			this.repo = {};
 			//Create and load plugin script
 			var _list = 'list.js',
-			_url_prefix = 'https://raw.github.com/jejakapemalu/TBDUserScript/devel/repos/',
+			_url_prefix = 'https://raw.github.com/jejakapemalu/TBDUserScript/v2.0/repos/',
 			r = document.createElement('script');
       r.type = 'text/javascript';
       r.src = _url_prefix + _list;
