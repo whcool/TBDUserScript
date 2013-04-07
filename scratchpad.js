@@ -13,7 +13,7 @@
 // @require     http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @require			http://chat.tbd.my/tbd/jquery.base64.min.js
 // @require     http://chat.tbd.my/tbd/pushstream.js
-// @version     1.0.78
+// @version     1.0.81
 // @grant GM_getValue
 // @grant GM_setValue
 // @grant GM_log
@@ -122,6 +122,7 @@ GM_TBD_init = function(){
       	TBDElement.body.appendChild(s);
 			}
 	},
+	//post function for chat
 	http_post_chat = function(msg){
 		GM_xmlhttpRequest({
   			method: "POST",
@@ -131,12 +132,7 @@ GM_TBD_init = function(){
 			  	"Content-Type": "application/x-www-form-urlencoded"
 			  	},
 			  onload: function(responseDetails) {
-	    		var dt = document.implementation.createDocumentType("html", 
-	              "-//W3C//DTD HTML 4.01 Transitional//EN", "http://www.w3.org/TR/html4/loose.dtd"),
-	            doc = document.implementation.createDocument('', '', dt),
-	            html = doc.createElement('html');
-	          html.innerHTML = responseDetails.responseText;
-	          doc.appendChild(html);
+					GM_log(responseDetails);
     		}
 		});
 	},
@@ -164,6 +160,7 @@ GM_TBD_init = function(){
 						GM_log('Executing action for '+TBDPlugins.enabled[i]);
 						var output = fn.action();
 						if (output !== false){
+								GM_log('Output detected');
 								if (typeof fn.callback === 'function'){							
 									fn.callback(output);
 								}else{
