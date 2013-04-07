@@ -42,7 +42,11 @@ if (typeof GM_xmlhttprequest === 'undefined'){
 				params.onload(req);
 			}
 		};
-		req.send(params.data);
+		if (params.method === 'POST'){
+		  req.send(params.data);
+		}else{
+		  req.send();
+		}
 	};
 }
 //Create temporary directory
@@ -71,15 +75,19 @@ GM_TBD_init = function(){
 		message : '',
 		GET : function(url,fn){
 			GM_xmlhttprequest({
+			    
 				method: "GET",
 				url: url,
+				headers: {
+			  	"Content-Type": "application/x-www-form-urlencoded"
+			  	},
 				onload: function(r) {
-					var dt = document.implementation.createDocumentType("html", "-//W3C//DTD HTML 4.01 Transitional//EN", "http://www.w3.org/TR/html4/loose.dtd"),
-					d = document.implementation.createDocument('', '', dt), html = d.createElement('html');
-					html.innerHTML = r.responseText;
-					d.appendChild(html);
+//					var dt = document.implementation.createDocumentType("html", "-//W3C//DTD HTML 4.01 Transitional//EN", "http://www.w3.org/TR/html4/loose.dtd"),
+//					d = document.implementation.createDocument('', '', dt), html = d.createElement('html');
+//					html.innerHTML = r.responseText;
+//					d.appendChild(html);
 					TBDResponse.message = r.responseText;
-					fn(d);
+					fn(r.responseText);
 				}
 			});
 		}
@@ -123,20 +131,6 @@ GM_TBD_init = function(){
       	TBDElement.body.appendChild(s);
 			}
 	},
-	//post function for chat
-	http_post_chat = function(msg){
-		GM_xmlhttpRequest({
-  			method: "POST",
-  			url: 'http://w3.tbd.my/xmlhttp.php?action=add_shout',
-		  	data: "shout_data=" + msg + "&shout_key=" + TBDSession.shout_key,
-			  headers: {
-			  	"Content-Type": "application/x-www-form-urlencoded"
-			  	},
-			  onload: function(responseDetails) {
-					GM_log(responseDetails);
-    		}
-		});
-	},
 
 	//TBDResponse what the output of the bot be like
 	TBDResponse =  function(){
@@ -177,15 +171,30 @@ GM_TBD_init = function(){
 				}
 			}
 	},
+	//post function for chat
+	http_post_chat = function(msg){
+		GM_xmlhttpRequest({
+  			method: "POST",
+  			url: 'http://w3.tbd.my/xmlhttp.php?action=add_shout',
+		  	data: "shout_data=" + msg + "&shout_key=" + TBDSession.shout_key,
+			  headers: {
+			  	"Content-Type": "application/x-www-form-urlencoded"
+			  	},
+			  onload: function(responseDetails) {
+					GM_log(responseDetails);
+    		}
+		});
+	},
 
 	//HTTP get chat contents
 	http_get_chat = function(){
-		TBDRequest.GET(TBDRequest.shout_url,function(doc) {
-						var d = doc.documentElement.innerHTML.split("<br>");
+	   TBDRequest.GET(TBDRequest.shout_url,function(d) {
+	                    d = new String(d);
+						d=d.split("<br>");
 						d = d[0].split("member.php?action=profile&amp;uid=");
 						var tmp = d[0].split('^'), 
-						b = tmp[0];
-						d = d[0].split("\">");						
+						b = tmp[0];				
+						d = d[0].split("\">");
 						TBDRequest.userid = d[0];
 						d = d[1].split(" - ");
 						TBDRequest.username = d[0];
@@ -199,7 +208,7 @@ GM_TBD_init = function(){
 	};
 	if (("WebSocket" in window)===true){    //Yes Got websocket
 		GM_log('Using socket');
-		http_get_chat();
+
 		var socket = new PushStream({
 			host: TBDRequest.url,
 			port: TBDRequest.port,
@@ -207,6 +216,7 @@ GM_TBD_init = function(){
 			channelsByArgument: true,
 			channelsArgument: 'channels'
 		});
+		http_get_chat();
 		//a = base64 msg
 		//b = msgID
 		//c = channel
