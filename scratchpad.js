@@ -7,75 +7,163 @@
 // @name        TheBotDilaila
 // @namespace   tbd.my
 // @description TheBotDilaila TheBotox Version
-// @author      Izham87, Jejaka Pemalu, Hotfloppy
+// @author      Izham87, Jejaka Pemalu, Hotfloppy, Suhz
 // @include     http://w3.tbd.my/*
 // @include     https://w3.tbd.my/*
 // @exclude	http*://w3.tbd.my/xmlhttp.php*
 // @exclude	http*://w3.tbd.my/ch.php
-// @require     http://chat.tbd.my/tbd/pushstream.js
-// @version     2.0.90
+// @exclude http*://w3.tbd.my/us/*
+// @require	//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
+// @require	//chat.tbd.my/tbd/jquery.base64.min.js
+// @version     2.0.197
 // ==/UserScript==
 //
 
-var isUndefined = function (obj){
-	return ((typeof obj === "undefined")===true);
-}
+var TBDDebug = false;
 //Rewrite function if not exists
-if ( isUndefined(unsafeWindow) ) {
+if (typeof unsafeWindow === 'undefined') {
     var unsafeWindow    = ( function () {
         var dummyElem   = document.createElement('p');
         dummyElem.setAttribute ('onclick', 'return window;');
         return dummyElem.onclick ();
     } ) ();
+//    var unsafeWindow = this.window;
 }
-if (typeof GM_log === 'undefined'){
-	var GM_log = function(msg){
-		console.log(msg);
+var TBD_log = function(msg){
+	if (TBDDebug === true){
+		if (typeof TBD_log === 'undefined' || typeof msg.toString() ==='undefined' || typeof msg !== 'string'){
+				console.log(msg);
+		}else{
+			GM_log(msg);
+		}
 	}
 }
 
-if (isUndefined(GM_xmlhttprequest)){
-	if ( isUndefined(GM_xmlhttpRequest)){
-		var GM_xmlhttprequest = function (params) {
- 	    var req = new XMLHttpRequest();
-   		req.open(params.method, params.url,true);
-			req.onreadystatechange = function () {
-				if (req.readyState == 4 && req.status == 200) {
-					params.onload(req);
-				}
-			};
-			if (params.method === 'POST'){
-			  for (var header in params.headers) {
-   			   req.setRequestHeader(header, params.headers[header]);
-				}
-			  req.send(params.data);
-			}else{
-			  req.send();
-			}
-		};
-	}else{
-		var GM_xmlhttprequest = GM_xmlhttpRequest;
-	}
-}
+
 //End of defined functions
-
-//Create temporary directory
-var TBDElement = new function(){
-	this.body = document.getElementsByTagName('body')[0];
-	var tmp = document.createElement('div');
-	tmp.style.display='none';
-	tmp.id = 'GM_TBD_tmp';
-	this.tmp = tmp;
-	this.body.appendChild(tmp);
-},//EOF TBDElement
-
 //Initialize of the bot
-GM_TBD_init = function(){
-	GM_log('Initialized');
-
-
+var GMTBD = function(jquery){
+	TBD_log('Initialized');
+		/************************************ TBDELEMENT ********************************************/
+    //Create temporary directory
+    var TBDElement = new function(){
+    	this.body = document.getElementsByTagName('body')[0];
+	   var tmp = document.createElement('div');
+    	tmp.style.display='none';
+	   tmp.id = 'GM_TBD_tmp';
+    	this.tmp = tmp;
+	   this.body.appendChild(tmp);
+    },//EOF TBDElement
+    /************************************ TBDRESPONSE ********************************************/
+	//TBDResponse what the output of the bot be like
+	TBDResponse =  function(){
+    	//Execute each repo's loaded actions
+			var uselists =TBDPlugins.usedLists;
+			TBD_log('Filter Request :'+TBDRequest.message.substring(0,20));
+			if (TBDRequest.message === 'test'){
+					TBDHttp.post_chat('HelloWorld!!\
+					[spoiler]\
+					[align=left]**** Session ****[/align]\
+					[align=left]Username: '+TBDSession.username+'[/align]\
+					[align=left]User ID: '+TBDSession.userid+'[/align]\
+					[align=left]**** Request ****[/align]\
+					[align=left]Username: '+TBDRequest.username+'[/align]\
+					[align=left]User ID: '+TBDRequest.userid+'[/align]\
+					[align=left]Message: '+TBDRequest.message+'[/align]\
+					[align=left]Websocket: '+TBDRequest.socket+'[/align]\
+					[align=left]Location: '+TBDRequest.location+'[/align]\
+					[/spoiler]');
+			}else {
+				for (var i=0; i<uselists.length; i++) {
+				var fn = 'TBDPlugin'+uselists[i];
+				fn = unsafeWindow[fn];
+				if (typeof fn !== 'undefined' && (TBDDebug===true || TBDRequest.userid !== TBDSession.userid)){
+					var re = (typeof fn.regexFlag === 'undefined')? new RegExp(fn.regex): new RegExp(fn.regex,fn.regexFlag);
+					if (re.test(String(TBDRequest.message))){
+						TBD_log('Test success for '+uselists[i]);
+						if (typeof fn.session !== 'undefined' && fn.session === true)fn.session = TBDSession;
+						if (typeof fn.request !== 'undefined' && fn.request === true)fn.request = TBDRequest;
+						TBD_log('Executing action for '+uselists[i]);
+						var output = fn.action();
+						if (output !== false && (TBDRequest.location === '/index.php' || TBDRequest.location  === '/') ){
+								TBD_log('Output detected');
+								if (typeof fn.callback === 'function'){
+									TBD_log('Plugin callback is a function');
+									fn.callback(output);
+								}else if (typeof fn.callback !== 'undefined' && fn.callback !== true){
+										var cb = TBDHttp[fn.callback];
+										cb(output);
+								}else if (typeof fn.callback === 'undefined' || fn.callback === true){
+										TBDHttp.post_chat(output);
+								}//callback eot
+							}//output n loc test
+						}//regex test eot
+				}else{//fn test eot
+					TBD_log('No function defined for '+uselists[i]);
+				}
+			}
+		}
+	},//EOF TBDResponse
+   /************************************ TBDHTTP ********************************************/
+	TBDHttp = {
+		//post function for chat
+		post_chat : function(msg){
+		jquery.ajax({
+  			type: "POST",
+  			beforeSend:function(){
+					 	TBD_log('exec: HTTP POST CHAT');
+				},
+				error:function(a,b,c){
+										TBD_log('exec[error]: HTTP POST CHAT '+c);
+				},
+  			url: 'http://w3.tbd.my/xmlhttp.php?action=add_shout',
+		  	data: {"shout_data": msg, "shout_key": TBDSession.shout_key},
+			  success: function() {
+				   	TBD_log('exec[done]: HTTP POST CHAT ');
+    		},
+    		xhrFields: {
+      		withCredentials: true
+   			},
+    		async:true
+		});
+	},//EOF http_post_chat
+	//HTTP get chat contents
+	get_chat : function(){
+	   jquery.ajax({
+	       		xhrFields: {
+		      		withCredentials: true
+		   			},
+					   url: TBDRequest.shout_url,
+					   beforeSend:function(){
+					   	TBD_log('exec: HTTP GET CHAT');
+					   },
+					   error:function(a,b,c){
+					   	TBD_log('exec[error]: HTTP GET CHAT '+c);
+					   },
+					   success:function(d) {
+					     	TBD_log('exec[done]: HTTP GET CHAT');
+	              d = new String(d);
+						d=d.split("<br>");
+						d = d[0].split('--');
+						TBDRequest.message =  d[d.length-1].replace(/^\s\s*/, '').replace(/\s+$/, '');
+						var b = parseInt(d[0].replace(/[^0-9]/g,''));
+						var hashTag = d[2].replace(/<[^<]+?>+(\W|\d)+/g,'');
+						TBDRequest.userid = hashTag.replace().replace(/\D+/g,'');
+						TBDRequest.username = hashTag.replace('^&raquo; ','').replace(/<[^<]+?>/g,'');
+						if (TBDRequest.lastid < b ){
+							TBDResponse();
+						}
+						TBDRequest.lastid = b;
+						},
+						type:'GET',
+						async:true,
+						dataType:'text'
+			});
+		}//EOF http_get_chat
+	},
 	//TBDRequest Represents what is displayed at chatbox.
-	var TBDRequest = {
+	TBDRequest = {
+		location:unsafeWindow.location.pathname,
 		url:'chat.tbd.my',
 		port : '80',
 		channel : 'tbdshoutbox',
@@ -84,19 +172,9 @@ GM_TBD_init = function(){
 		username : '',
 		userid : '',
 		message : '',
-		GET : function(url,fn){
-			GM_xmlhttprequest({
-			    
-				method: "GET",
-				url: url,
-				onload: function(r) {
-					TBDResponse.message = r.responseText;
-					fn(r.responseText);
-				}
-			});
-		}
+		socket : (("WebSocket" in window)===true),
 	},//EOF TBDRequest
-
+	/************************************ TBDSESSION ********************************************/
 	//TBDSession The users identity to post or get anything
 	TBDSession = {
 		username : unsafeWindow.tbd_uname,
@@ -104,151 +182,83 @@ GM_TBD_init = function(){
 		shout_key : jquery('#shout_key').attr('value'),
 		post_key : 	unsafeWindow.my_post_key
 	},//EOF TBDSession
+	/************************************ TBDPLUGINS ********************************************/
 	//TBDPlugins Load or call the plugins action
-	TBDPlugins = new function(){
-			this.actions = {};
-			this.repo = {};
-			//Create and load plugin script
-			var _list = 'list.js',
-			_url_prefix = 'https://raw.github.com/jejakapemalu/TBDUserScript/v2.0/repos/',
-			r = document.createElement('script');
-      r.type = 'text/javascript';
-      r.src = _url_prefix + _list;
-      TBDElement.body.appendChild(r);
-      
-      //Load Repolists	
-			var _get_repo_list = function(){
-				if ( isUndefined(unsafeWindow.TBDRepositories)){
-					window.setTimeout(_get_repo_list, 100);				
-				}else{
-					this.repo = unsafeWindow.TBDRepositories;
-				}
-    	};  	
-	  	_get_repo_list();
-    	//Enabled plugins lists
-			this.enabled = ['Buzzer','Salam'];
-			
-			for (var i=0; i<this.enabled.length; i++) {
-				var s = document.createElement('script');
-      	s.type = 'text/javascript';
-      	s.src = _url_prefix +'plugins/tbd.userscript.'+this.enabled[i].toLowerCase()+'.js';
-      	TBDElement.body.appendChild(s);
-			}
-	},//EOF TBDPlugins
-
-	//TBDResponse what the output of the bot be like
-	TBDResponse =  function(){
-    	//Execute each repo's loaded actions
-			GM_log('Filter :'+TBDRequest.message);
-			for (var i=0; i<TBDPlugins.enabled.length; i++) {
-				var fn = 'TBDPlugin'+TBDPlugins.enabled[i];
-				fn = unsafeWindow[fn];
-				if (typeof fn !== 'undefined' && TBDRequest.userid !== TBDSession.userid){
-					if (typeof fn.regexFlag === 'undefined'){
-						var re = new RegExp(fn.regex);
-					}else{
-						var re = new RegExp(fn.regex,fn.regexFlag);
+	TBDPlugins = {
+      src : "http://w3.tbd.my/us/plugins.php",
+       //Enabled plugins lists
+	   	usedLists : ['Buzzer','Salam']
+	};//EOF TBDPlugins
+	//Load Repolists	
+	   jquery.ajax({
+	   		async:false,
+        cache:true,
+	   			xhrFields: {
+      			withCredentials: true
+ 				},
+  			beforeSend:function(){
+					   	TBD_log('exec: PLUGINS GET LIST');
+				},
+				error:function(xhr, textStatus, errorThrown ){
+				   	TBD_log('exec[error]: PLUGINS GET LIST '+errorThrown);
+				},
+	    	success:function(data,status, xhr){
+				   	TBD_log('exec[done]: PLUGINS GET LIST');
+				   	var useList = TBDPlugins.usedLists;
+						jquery.each(useList,function(_key,_object){
+								if (typeof data[_object] !== 'undefined'){
+   			    		    var s = document.createElement('script');
+                  	  s.type = 'text/javascript';
+                   	  s.src = data[_object];
+                   	  TBDElement.body.appendChild(s);
+                   	  var fn_wait = function(){
+                   	  	if (typeof unsafeWindow['TBDPlugin'+data[_object]] === 'undefined'){
+                   	  		window.setTimeout(fn_wait,100);
+                   	  	}
+                   	  }
+                   	  fn_wait();
+          	     }
+            });
+           },
+          url:TBDPlugins.src,
+          type:'GET',
+          dataType:'json'
+        }).done(function(){				
+        TBDHttp.get_chat();
+				if (TBDRequest.socket){    //Yes Got websocket
+					TBD_log('Using socket');
+					var socket = new unsafeWindow.PushStream({
+						host: TBDRequest.url,
+						port: TBDRequest.port,
+						modes: "websocket",
+						channelsByArgument: true,
+						channelsArgument: 'channels'
+					});
+					socket.onmessage = function(a,b,c){
+					if (TBDRequest.lastid < b){//Make sure the msg isn't it
+						var d = jquery.parseJSON(jquery.base64.decode(a));
+							TBDRequest.message = d.shout_msg;
+							TBDRequest.username = jquery(d.uname).html();
+							TBDRequest.userid = d.uid;
+							setTimeout(TBDResponse,500);
 					}
-					if (re.test(String(TBDRequest.message))){
-						if (typeof fn.session !== 'undefined' && fn.session === true){
-							fn.session = TBDSession;
-						}
-						if (typeof fn.request !== 'undefined' && fn.request === true){
-							fn.request = TBDRequest;
-						}
-						GM_log('Executing action for '+TBDPlugins.enabled[i]);
-						var output = fn.action();
-						if (output !== false){
-								GM_log('Output detected');
-								if (typeof fn.callback === 'function'){							
-									fn.callback(output);
-								}else{
-									var callback = window[fn.callback];
-									if (!isUndefined(callback)){
-										cb(output);
-									}else{
-										http_post_chat(output);
-									}
-								}
-						}
-					}
-				}
-			}
-	},//EOF TBDResponse
-	//post function for chat
-	http_post_chat = function(msg){
-		GM_xmlhttpRequest({
-  			method: "POST",
-  			url: 'http://w3.tbd.my/xmlhttp.php?action=add_shout',
-		  	data: "shout_data=" + msg + "&shout_key=" + TBDSession.shout_key,
-			  headers: {
-			  	"Content-Type": "application/x-www-form-urlencoded"
-			  	},
-			  onload: function(responseDetails) {
-					GM_log(responseDetails);
-    		}
-		});
-	},//EOF http_post_chat
-
-	//HTTP get chat contents
-	http_get_chat = function(){
-	   TBDRequest.GET(TBDRequest.shout_url,function(d) {
-	                    d = new String(d);
-						d=d.split("<br>");
-						d = d[0].split("member.php?action=profile&amp;uid=");
-						var tmp = d[0].split('^'), 
-						b = tmp[0];				
-						d = d[0].split("\">");
-						TBDRequest.userid = d[0];
-						d = d[1].split(" - ");
-						TBDRequest.username = d[0];
-						d = d[1].split(" -- ");
-						TBDRequest.message = d[1];
-				if (TBDRequest.lastid < b ){
-					TBDResponse();
-				}
 					TBDRequest.lastid = b;
-			});
-	};//EOF http_get_chat
-	
-	if (("WebSocket" in window)===true){    //Yes Got websocket
-		GM_log('Using socket');
-
-		var socket = new PushStream({
-			host: TBDRequest.url,
-			port: TBDRequest.port,
-			modes: "websocket",
-			channelsByArgument: true,
-			channelsArgument: 'channels'
-		});
-		http_get_chat();
-		//a = base64 msg
-		//b = msgID
-		//c = channel
-		socket.onmessage = function(a,b,c){
-			if (TBDRequest.lastid < b){//Make sure the msg isn't it
-				var d = jquery.parseJSON(jquery.base64.decode(a));
-				TBDRequest.message = d.shout_msg;
-				TBDRequest.username = jquery(d.uname).html();
-				TBDRequest.userid = d.uid;
-				TBDResponse();
-			}
-			TBDRequest.lastid = b;
-	  };		
-		socket.addChannel(TBDRequest.channel);
-		socket.connect();	
-	}else{//no got websocket
-		GM_log('No socket');
-		setInterval (function(){http_get_chat()},2000)
-	}
+	  	};		
+			socket.addChannel(TBDRequest.channel);
+			socket.connect();	
+		}else{//no got websocket
+			TBD_log('No socket');
+			setInterval (function(){TBDHttp.get_chat()},2000)
+		}
+});
 },//EOF GM_TBD_init
 GM_start = function () {
-	if (	isUndefined(unsafeWindow.jQuery)) {
+	if ( typeof window.jQuery === 'undefined') {
 		window.setTimeout(GM_start, 100);
 	} else {
-		jquery = unsafeWindow.jQuery = unsafeWindow.jQuery.noConflict(true);
+		jquery = jQuery.noConflict(true);
 		jquery(document).ready(function(){
-			GM_TBD_init();
+		    if (jquery("#GM_TBD_tm").length === 0) GMTBD(jquery);			
 		});
 	}
 };//EOF GM_start
