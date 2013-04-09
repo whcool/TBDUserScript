@@ -2,7 +2,6 @@
 // 2013-04-07
 // New Core System with plugins
 // --------------------------------------------------------------------
-//
 // ==UserScript==
 // @name        TheBotDilaila
 // @namespace   tbd.my
@@ -13,9 +12,7 @@
 // @exclude	http*://w3.tbd.my/xmlhttp.php*
 // @exclude	http*://w3.tbd.my/ch.php
 // @exclude http*://w3.tbd.my/us/*
-// @require	//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
-// @require	//chat.tbd.my/tbd/jquery.base64.min.js
-// @version     2.0.197
+// @version     2.0.202
 // ==/UserScript==
 //
 
@@ -23,22 +20,21 @@ var TBDDebug = false;
 //Rewrite function if not exists
 if (typeof unsafeWindow === 'undefined') {
     var unsafeWindow    = ( function () {
-        var dummyElem   = document.createElement('p');
+        var dummyElem   = document.createElement('a');
         dummyElem.setAttribute ('onclick', 'return window;');
         return dummyElem.onclick ();
-    } ) ();
+    })();
 //    var unsafeWindow = this.window;
 }
 var TBD_log = function(msg){
 	if (TBDDebug === true){
-		if (typeof TBD_log === 'undefined' || typeof msg.toString() ==='undefined' || typeof msg !== 'string'){
-				console.log(msg);
+		if (typeof GM_log === 'undefined' || typeof msg.toString() ==='undefined' || typeof msg !== 'string'){
+			console.log(msg);
 		}else{
 			GM_log(msg);
 		}
 	}
 }
-
 
 //End of defined functions
 //Initialize of the bot
@@ -59,8 +55,8 @@ var GMTBD = function(jquery){
 	TBDResponse =  function(){
     	//Execute each repo's loaded actions
 			var uselists =TBDPlugins.usedLists;
-			TBD_log('Filter Request :'+TBDRequest.message.substring(0,20));
-			if (TBDRequest.message === 'test'){
+			TBD_log('Filter Request :'+TBDRequest.message.substring(0,30));
+			if (TBDRequest.message === 'test' && (TBDRequest.userid === TBDSession.userid)){
 					TBDHttp.post_chat('HelloWorld!!\
 					[spoiler]\
 					[align=left]**** Session ****[/align]\
@@ -118,8 +114,12 @@ var GMTBD = function(jquery){
 				},
   			url: 'http://w3.tbd.my/xmlhttp.php?action=add_shout',
 		  	data: {"shout_data": msg, "shout_key": TBDSession.shout_key},
-			  success: function() {
-				   	TBD_log('exec[done]: HTTP POST CHAT ');
+			  success: function(data) {
+                  TBD_log('exec[done]: HTTP POST CHAT ');
+                  if (data === String("flood|0")){
+                      TBD_log('exec[flood]: HTTP POST CHAT ');
+                      setTimeout(function(){TBDHttp.post_chat(msg);},800);
+                  }
     		},
     		xhrFields: {
       		withCredentials: true
@@ -161,6 +161,7 @@ var GMTBD = function(jquery){
 			});
 		}//EOF http_get_chat
 	},
+ /************************************ TBDREQUEST ********************************************/
 	//TBDRequest Represents what is displayed at chatbox.
 	TBDRequest = {
 		location:unsafeWindow.location.pathname,
@@ -240,7 +241,7 @@ var GMTBD = function(jquery){
 							TBDRequest.message = d.shout_msg;
 							TBDRequest.username = jquery(d.uname).html();
 							TBDRequest.userid = d.uid;
-							setTimeout(TBDResponse,500);
+							setTimeout(TBDResponse,600);
 					}
 					TBDRequest.lastid = b;
 	  	};		
@@ -248,17 +249,17 @@ var GMTBD = function(jquery){
 			socket.connect();	
 		}else{//no got websocket
 			TBD_log('No socket');
-			setInterval (function(){TBDHttp.get_chat()},2000)
+			setInterval (TBDHttp.get_chat,2000)
 		}
 });
 },//EOF GM_TBD_init
 GM_start = function () {
-	if ( typeof window.jQuery === 'undefined') {
+	if ( typeof unsafeWindow.jQuery === 'undefined') {
 		window.setTimeout(GM_start, 100);
 	} else {
-		jquery = jQuery.noConflict(true);
+		jquery = unsafeWindow.jQuery = unsafeWindow.jQuery.noConflict(true);
 		jquery(document).ready(function(){
-		    if (jquery("#GM_TBD_tm").length === 0) GMTBD(jquery);			
+		    if (jquery("#GM_TBD_tmp").length === 0) GMTBD(jquery);			
 		});
 	}
 };//EOF GM_start
